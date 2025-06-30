@@ -46,7 +46,7 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "opencv_version=${{ github.event.inputs.opencv_version }}" >> $GITHUB_OUTPUT
-            BASE_VERSION="${{ github.event.inputs.opencv_version }}"
+            PACKAGE_VERSION="${{ github.event.inputs.opencv_version }}"
           else
             # Get latest OpenCV release
             LATEST_VERSION=$(curl -s https://api.github.com/repos/opencv/opencv/releases/latest | jq -r .tag_name)
@@ -56,7 +56,7 @@ jobs:
             if [ "${{ github.event_name }}" != "schedule" ]; then
               echo "should_build=true" >> $GITHUB_OUTPUT
               echo "opencv_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-              BASE_VERSION="$LATEST_VERSION"
+              PACKAGE_VERSION="$LATEST_VERSION"
             else
               # For scheduled runs, check if we already have this version
               if gh release view "opencv-$LATEST_VERSION" --repo ${{ github.repository }} >/dev/null 2>&1; then
@@ -66,35 +66,9 @@ jobs:
               else
                 echo "should_build=true" >> $GITHUB_OUTPUT
                 echo "opencv_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-                BASE_VERSION="$LATEST_VERSION"
+                PACKAGE_VERSION="$LATEST_VERSION"
               fi
             fi
-          fi
-          
-          # Determine unique package version by checking NPM
-          PACKAGE_VERSION="$BASE_VERSION"
-          
-          echo "🔍 Checking NPM for existing versions..."
-          
-          # Check if base version exists
-          if npm view opencv-js-wasm@$PACKAGE_VERSION version >/dev/null 2>&1; then
-            echo "⚠️ Version $PACKAGE_VERSION already exists on NPM, trying suffixes..."
-            
-            # Try suffixes a, b, c... until we find an available version
-            for suffix in a b c d e f g h i j k l m n o p q r s t u v w x y z; do
-              TEST_VERSION="${BASE_VERSION}.${suffix}"
-              echo "   Testing version: $TEST_VERSION"
-              
-              if ! npm view opencv-js-wasm@$TEST_VERSION version >/dev/null 2>&1; then
-                PACKAGE_VERSION="$TEST_VERSION"
-                echo "✅ Found available version: $PACKAGE_VERSION"
-                break
-              else
-                echo "   ❌ Version $TEST_VERSION already exists"
-              fi
-            done
-          else
-            echo "✅ Version $PACKAGE_VERSION is available on NPM"
           fi
           
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
