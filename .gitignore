@@ -1,0 +1,10 @@
+.vscode/
+node_modules/
+dist/
+build/
+opencv/
+opencv_contrib/
+*.log
+*.tar.gz
+*.zip
+.DS_Store
