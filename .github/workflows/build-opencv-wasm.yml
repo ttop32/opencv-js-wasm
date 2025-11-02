@@ -48,8 +48,8 @@ jobs:
             echo "opencv_version=${{ github.event.inputs.opencv_version }}" >> $GITHUB_OUTPUT
             PACKAGE_VERSION="${{ github.event.inputs.opencv_version }}"
           else
-            # Get latest OpenCV release
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/opencv/opencv/releases/latest | jq -r .tag_name)
+            # Get latest OpenCV tag (not just releases)
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/opencv/opencv/tags | jq -r '.[0].name')
             echo "Latest OpenCV version: $LATEST_VERSION"
             
             # For manual triggers (push/PR), always build
