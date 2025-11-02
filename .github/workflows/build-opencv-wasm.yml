@@ -48,8 +48,8 @@ jobs:
             echo "opencv_version=${{ github.event.inputs.opencv_version }}" >> $GITHUB_OUTPUT
             PACKAGE_VERSION="${{ github.event.inputs.opencv_version }}"
           else
-            # Get latest OpenCV release
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/opencv/opencv/releases/latest | jq -r .tag_name)
+            # Get latest OpenCV tag (not just releases)
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/opencv/opencv/tags | jq -r '.[0].name')
             echo "Latest OpenCV version: $LATEST_VERSION"
             
             # For manual triggers (push/PR), always build
@@ -453,11 +453,23 @@ jobs:
       - name: Build Summary
         if: always()
         run: |
+          # Set default values if outputs are empty
+          OPENCV_VER="${{ needs.check-version.outputs.opencv_version }}"
+          PACKAGE_VER="${{ needs.check-version.outputs.package_version }}"
+          
+          if [ -z "$OPENCV_VER" ] || [ "$OPENCV_VER" == "null" ]; then
+            OPENCV_VER="Unknown (check-version job may have failed)"
+          fi
+          
+          if [ -z "$PACKAGE_VER" ] || [ "$PACKAGE_VER" == "null" ]; then
+            PACKAGE_VER="Unknown"
+          fi
+          
           echo "## 📋 Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| OpenCV Version | \`${{ needs.check-version.outputs.opencv_version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Package Version | \`${{ needs.check-version.outputs.package_version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| OpenCV Version | \`$OPENCV_VER\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package Version | \`$PACKAGE_VER\` |" >> $GITHUB_STEP_SUMMARY
           
           if [ -f "dist/opencv.js" ]; then
             JS_SIZE=$(wc -c < dist/opencv.js)
@@ -467,12 +479,15 @@ jobs:
             echo "| File Type | ✅ **Single File with Embedded WASM** |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Build Status | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Error | Build did not complete successfully. Check logs above for details. |" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🚀 Usage" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "npm install opencv-js-wasm@${{ needs.check-version.outputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "npm install opencv-js-wasm@$PACKAGE_VER" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Single file deployment:** Only opencv.js needed - WASM is embedded for maximum simplicity." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Job summary generated at $(date -u '+%Y-%m-%d %H:%M:%S UTC')_" >> $GITHUB_STEP_SUMMARY
